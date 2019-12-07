@@ -24,7 +24,7 @@ import io
 from __future__ import absolute_import, division, print_function, unicode_literals
 import functools
 import pandas as pd
-from tensorflow_core.python.keras import regularizers
+from tensorflow.keras import regularizers
 
 """Upload heart_train.csv and heart_test.csv"""
 
@@ -35,7 +35,6 @@ uploaded = files.upload()
 
 print("--Process data--")
 train_data = pd.read_csv('heart_train.csv')
-test_data = pd.read_csv('heart_test.csv')
 
 train_data['famhist'] = pd.Categorical(train_data['famhist'])
 train_data['famhist'] = train_data.famhist.cat.codes
@@ -46,24 +45,22 @@ train_dataset = dataset.shuffle(len(train_data)).batch(1)
 
 print("--Make model--")
 model = tf.keras.Sequential([
-  tf.keras.layers.Dense(64, activation='relu'),
-  tf.keras.layers.Dense(32, activation='relu'),
-    tf.keras.layers.Dropout(0.4),
-  tf.keras.layers.Dense(32, activation='relu'),
-  tf.keras.layers.Dense(16, activation='relu'),
-  tf.keras.layers.Dropout(0.2),
+  tf.keras.layers.Dense(128, activation='relu', kernel_regularizer=regularizers.l2(0.004)),
+  tf.keras.layers.Dropout(0.5),
+  tf.keras.layers.Dense(128, activation='relu', kernel_regularizer=regularizers.l2(0.004)),
+  tf.keras.layers.Dense(32, activation='relu', kernel_regularizer=regularizers.l2(0.004)),
+  tf.keras.layers.Dropout(0.5),
   tf.keras.layers.Dense(1, activation='sigmoid')
 ])
 
-
-
-model.compile(optimizer='adam', loss='binary_crossentropy', metrics=['accuracy'])
+model.compile(optimizer='adamax', loss='binary_crossentropy', metrics=['accuracy'])
 
 print("--Fit model--")
 model.fit(train_dataset, epochs=20, verbose=2)
 
 """Parse test data and evaluate model"""
 
+test_data = pd.read_csv('heart_test.csv')
 test_data['famhist'] = pd.Categorical(test_data['famhist'])
 test_data['famhist'] = test_data.famhist.cat.codes
 
@@ -71,7 +68,7 @@ target2 = test_data.pop('chd')
 
 dataset2 = tf.data.Dataset.from_tensor_slices((test_data.values, target2.values))
 
-test_dataset = dataset.shuffle(len(test_data)).batch(1)
+test_dataset = dataset2.shuffle(len(test_data)).batch(1)
 
 print("--Evaluate model--")
 model_loss, model_acc = model.evaluate(test_dataset, verbose=2)
